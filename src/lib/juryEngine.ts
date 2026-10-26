@@ -7,6 +7,133 @@ import { VirtualFile, JuryEvaluation, ProposedEdit, WeaknessItem, MultiVersionCo
 import * as Diff from 'diff';
 
 /**
+ * Gemini structured-output schema for jury evaluations.
+ * Passed with responseMimeType 'application/json' so the model is guaranteed
+ * to return valid JSON matching the JuryEvaluation contract (see types.ts).
+ */
+export const JURY_RESPONSE_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    overallScore: { type: 'NUMBER' },
+    verdict: {
+      type: 'STRING',
+      enum: ['ACCEPT_EXEMPLARY', 'MINOR_REVISIONS', 'MAJOR_REVISIONS', 'CRITICAL_FLAWS'],
+    },
+    verdictTitleFa: { type: 'STRING' },
+    verdictSummaryFa: { type: 'STRING' },
+    physicsAndMathValidation: {
+      type: 'OBJECT',
+      properties: {
+        score: { type: 'NUMBER' },
+        lawsChecked: { type: 'ARRAY', items: { type: 'STRING' } },
+        theoreticalConsistency: { type: 'STRING' },
+        flawsIdentified: { type: 'ARRAY', items: { type: 'STRING' } },
+      },
+      required: ['score', 'lawsChecked', 'theoreticalConsistency', 'flawsIdentified'],
+    },
+    patentViability: {
+      type: 'OBJECT',
+      properties: {
+        score: { type: 'NUMBER' },
+        noveltyStatus: { type: 'STRING' },
+        priorArtRisks: { type: 'ARRAY', items: { type: 'STRING' } },
+        claimStrength: { type: 'STRING' },
+        patentReadiness: { type: 'STRING' },
+        recommendedPatentClaims: { type: 'ARRAY', items: { type: 'STRING' } },
+      },
+      required: ['score', 'noveltyStatus', 'priorArtRisks', 'claimStrength', 'patentReadiness', 'recommendedPatentClaims'],
+    },
+    codeAndEngineeringRigor: {
+      type: 'OBJECT',
+      properties: {
+        score: { type: 'NUMBER' },
+        algorithmicComplexity: { type: 'STRING' },
+        memoryAndConcurrencySafety: { type: 'STRING' },
+        architecturalSoundness: { type: 'STRING' },
+      },
+      required: ['score', 'algorithmicComplexity', 'memoryAndConcurrencySafety', 'architecturalSoundness'],
+    },
+    weaknessesAndFlaws: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          id: { type: 'STRING' },
+          title: { type: 'STRING' },
+          severity: { type: 'STRING', enum: ['critical', 'high', 'medium', 'low'] },
+          description: { type: 'STRING' },
+          fixMethod: { type: 'STRING' },
+          solvableByAI: { type: 'BOOLEAN' },
+          targetFile: { type: 'STRING' },
+        },
+        required: ['id', 'title', 'severity', 'description', 'fixMethod', 'solvableByAI'],
+      },
+    },
+    proposedEdits: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          id: { type: 'STRING' },
+          filePath: { type: 'STRING' },
+          rationale: { type: 'STRING' },
+          newFullContent: { type: 'STRING' },
+        },
+        required: ['id', 'filePath', 'rationale', 'newFullContent'],
+      },
+    },
+    multiVersionComparison: {
+      type: 'OBJECT',
+      nullable: true,
+      properties: {
+        versionsAnalyzed: { type: 'ARRAY', items: { type: 'STRING' } },
+        bestVersionId: { type: 'STRING' },
+        bestVersionRationale: { type: 'STRING' },
+        rankings: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: {
+              versionId: { type: 'STRING' },
+              versionName: { type: 'STRING' },
+              rank: { type: 'NUMBER' },
+              score: { type: 'NUMBER' },
+              pros: { type: 'ARRAY', items: { type: 'STRING' } },
+              cons: { type: 'ARRAY', items: { type: 'STRING' } },
+              keyDifferences: { type: 'STRING' },
+            },
+          },
+        },
+        hybridSynthesisRecipe: { type: 'STRING' },
+        suggestedMasterFiles: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: {
+              path: { type: 'STRING' },
+              description: { type: 'STRING' },
+              content: { type: 'STRING' },
+            },
+          },
+        },
+      },
+    },
+  },
+  required: [
+    'overallScore',
+    'verdict',
+    'verdictTitleFa',
+    'verdictSummaryFa',
+    'physicsAndMathValidation',
+    'patentViability',
+    'codeAndEngineeringRigor',
+    'weaknessesAndFlaws',
+    'proposedEdits',
+  ],
+};
+
+
+/**
  * Builds the strict International Scientific Jury & Patent Committee prompt
  */
 export function buildJuryPrompt(

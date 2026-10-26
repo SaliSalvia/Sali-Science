@@ -18,7 +18,8 @@ import {
   Plus, 
   Layers, 
   Trash2,
-  Sparkles
+  Sparkles,
+  Pencil
 } from 'lucide-react';
 import { VirtualFile, FileTreeNode, ZipArchive } from '../lib/types.ts';
 import { formatFileSize, buildFileTree } from '../lib/fileSystem.ts';
@@ -33,6 +34,7 @@ interface FileExplorerProps {
   onLoadSampleProjects: () => void;
   onExportZip: () => void;
   onClearFiles: () => void;
+  onRenameArchive: (archiveId: string, newName: string) => void;
 }
 
 export const FileExplorer: React.FC<FileExplorerProps> = ({
@@ -45,12 +47,41 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
   onLoadSampleProjects,
   onExportZip,
   onClearFiles,
+  onRenameArchive,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [collapsedDirs, setCollapsedDirs] = useState<Record<string, boolean>>({});
+  const [renamingArchiveId, setRenamingArchiveId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const longPressTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const toggleDirectory = (path: string) => {
     setCollapsedDirs((prev) => ({ ...prev, [path]: !prev[path] }));
+  };
+
+  // Archive / project renaming (cascades version tags via onRenameArchive)
+  const startRenameArchive = (archive: ZipArchive) => {
+    setRenameValue(archive.versionLabel || archive.name);
+    setRenamingArchiveId(archive.id);
+  };
+
+  const commitRenameArchive = () => {
+    if (renamingArchiveId && renameValue.trim()) {
+      onRenameArchive(renamingArchiveId, renameValue.trim());
+    }
+    setRenamingArchiveId(null);
+  };
+
+  const handleArchivePointerDown = (archive: ZipArchive) => {
+    cancelArchiveLongPress();
+    longPressTimer.current = setTimeout(() => startRenameArchive(archive), 550);
+  };
+
+  const cancelArchiveLongPress = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
   };
 
   // Filter files by search query
@@ -206,16 +237,52 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
             <span className="text-cyan-400 font-medium text-[9px]">آماده سنتز و داوری</span>
           </div>
           <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
-            {archives.map((arch) => (
-              <div
-                key={arch.id}
-                className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-800/90 border border-slate-700 text-[10px] text-slate-300"
-              >
-                <FileArchive className="w-3 h-3 text-cyan-400 shrink-0" />
-                <span className="truncate max-w-[120px]" title={arch.name}>{arch.name}</span>
-                <span className="text-[9px] text-slate-500">({arch.fileCount})</span>
-              </div>
-            ))}
+            {archives.map((arch) =>
+              renamingArchiveId === arch.id ? (
+                <div
+                  key={arch.id}
+                  className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-800/90 border border-cyan-500/50 text-[10px]"
+                >
+                  <FileArchive className="w-3 h-3 text-cyan-400 shrink-0" />
+                  <input
+                    autoFocus
+                    type="text"
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') commitRenameArchive();
+                      if (e.key === 'Escape') setRenamingArchiveId(null);
+                    }}
+                    onBlur={commitRenameArchive}
+                    className="w-28 bg-transparent text-[10px] text-white focus:outline-none border-b border-cyan-500/60"
+                    placeholder="نام جدید..."
+                  />
+                </div>
+              ) : (
+                <div
+                  key={arch.id}
+                  onDoubleClick={() => startRenameArchive(arch)}
+                  onPointerDown={() => handleArchivePointerDown(arch)}
+                  onPointerUp={cancelArchiveLongPress}
+                  onPointerLeave={cancelArchiveLongPress}
+                  onContextMenu={(e) => { e.preventDefault(); startRenameArchive(arch); }}
+                  title="دوبار کلیک، راست‌کلیک یا لمس طولانی برای تغییر نام آرشیو/پروژه"
+                  className="group flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-800/90 border border-slate-700 text-[10px] text-slate-300 hover:border-cyan-500/40 transition-colors cursor-pointer"
+                >
+                  <FileArchive className="w-3 h-3 text-cyan-400 shrink-0" />
+                  <span className="truncate max-w-[120px]" title={arch.name}>{arch.versionLabel || arch.name}</span>
+                  <span className="text-[9px] text-slate-500">({arch.fileCount})</span>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); startRenameArchive(arch); }}
+                    className="text-slate-500 hover:text-cyan-300 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                    title="تغییر نام آرشیو"
+                  >
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                </div>
+              )
+            )}
           </div>
         </div>
       )}

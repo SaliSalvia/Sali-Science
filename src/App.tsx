@@ -20,7 +20,8 @@ import {
 import { 
   buildJuryPrompt, 
   parseJuryResponse, 
-  applyApprovedEdits 
+  applyApprovedEdits,
+  JURY_RESPONSE_SCHEMA 
 } from './lib/juryEngine.ts';
 import { 
   SupportedModelId, 
@@ -42,6 +43,10 @@ import { BatchEditApprovalModal } from './components/BatchEditApprovalModal.tsx'
 import { ChatAndWorkbench } from './components/ChatAndWorkbench.tsx';
 import { ApiKeyModal } from './components/ApiKeyModal.tsx';
 
+// Server-proxy mode: build with VITE_API_MODE=proxy to route all Gemini calls
+// through server/proxy.js so the API key never reaches the browser.
+const USE_PROXY = import.meta.env.VITE_API_MODE === 'proxy';
+
 export default function App() {
   // API Key & Model State
   const [apiKey, setApiKey] = useState<string>(() => {
@@ -53,7 +58,8 @@ export default function App() {
   });
   const [showKeyModal, setShowKeyModal] = useState<boolean>(() => {
     // Show key modal automatically on first launch if no key is saved
-    return !localStorage.getItem('axiom_gemini_api_key');
+    // (skipped in proxy mode: the key lives on the server)
+    return !USE_PROXY && !localStorage.getItem('axiom_gemini_api_key');
   });
 
   // Files & Virtual Filesystem State
@@ -83,6 +89,18 @@ export default function App() {
     setSelectedModel(newModel);
     localStorage.setItem('axiom_gemini_api_key', newKey);
     localStorage.setItem('axiom_gemini_model', newModel);
+  };
+
+  // Rename an archive / project (cascades to its files' version tags)
+  const handleRenameArchive = (archiveId: string, newName: string) => {
+    const cleanName = newName.trim();
+    if (!cleanName) return;
+    setZipArchives((prev) =>
+      prev.map((a) => (a.id === archiveId ? { ...a, name: cleanName, versionLabel: cleanName } : a))
+    );
+    setVirtualFiles((prev) =>
+      prev.map((f) => (f.archiveId === archiveId ? { ...f, archiveName: cleanName, versionTag: cleanName } : f))
+    );
   };
 
   // ZIP Upload handler
@@ -182,7 +200,7 @@ export default function App() {
 
   // Send prompt or trigger preset
   const handleSendMessage = async (userPrompt: string) => {
-    if (!apiKey.trim()) {
+    if (!USE_PROXY && !apiKey.trim()) {
       // If sample project is loaded and user clicks evaluation, provide demo evaluation
       if (virtualFiles.some(f => f.archiveId?.startsWith('arch_sample'))) {
         const userMsg: ChatMessage = {
@@ -250,6 +268,8 @@ export default function App() {
         modelName: selectedModel,
         prompt: constructedPrompt,
         files: virtualFiles,
+        useProxy: USE_PROXY,
+        responseSchema: isJuryIntent && virtualFiles.length > 0 ? JURY_RESPONSE_SCHEMA : undefined,
         onStreamChunk: (chunk) => {
           setStreamingText((prev) => prev + chunk);
         },
@@ -422,6 +442,7 @@ export default function App() {
             onSelectFile={(f) => setSelectedFile(f)}
             onUploadZip={handleUploadZip}
             onUploadSingleFile={handleUploadSingleFile}
+            onRenameArchive={handleRenameArchive}
             onLoadSampleProjects={handleLoadSampleProjects}
             onExportZip={handleExportZip}
             onClearFiles={handleClearFiles}
