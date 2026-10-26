@@ -54,7 +54,7 @@ export function buildJuryPrompt(
 
 ${fileSummaries}
 
-${userSpecificQuestion ? `سوال یا پرامپت خاص کاربر:\n"${userSpecificQuestion}"\n` : ''}
+${userSpecificQuestion ? `سوال یا پرامپت خاص کاربر::\n${JSON.stringify(userSpecificQuestion)}\n` : ''}
 ${modeInstruction}
 
 دستورالعمل داوری:
@@ -249,20 +249,32 @@ export function applyApprovedEdits(
   approvedEdits: ProposedEdit[]
 ): { updatedFiles: VirtualFile[]; appliedCount: number } {
   let appliedCount = 0;
-  const editMap = new Map<string, ProposedEdit>();
+
+  // Exact (case-insensitive) path matches always take priority.
+  const editsByPath = new Map<string, ProposedEdit>();
+
+  // Basename fallback is only safe when exactly one loaded file has that name;
+  // otherwise an edit meant for one version could overwrite another version's file.
+  const nameCounts = new Map<string, number>();
+  for (const file of files) {
+    const key = file.name.toLowerCase().trim();
+    nameCounts.set(key, (nameCounts.get(key) || 0) + 1);
+  }
+  const editsByUniqueName = new Map<string, ProposedEdit>();
+
   for (const edit of approvedEdits) {
-    if (edit.approved && edit.newFullContent) {
-      editMap.set(edit.filePath.toLowerCase().trim(), edit);
-      // Also match basename in case full path differed slightly
-      const base = edit.filePath.split('/').pop()?.toLowerCase();
-      if (base) editMap.set(base, edit);
+    if (!edit.approved || !edit.newFullContent) continue;
+    editsByPath.set(edit.filePath.toLowerCase().trim(), edit);
+    const base = edit.filePath.split('/').pop()?.toLowerCase().trim();
+    if (base && nameCounts.get(base) === 1) {
+      editsByUniqueName.set(base, edit);
     }
   }
 
   const updatedFiles = files.map(file => {
-    const fullPathKey = file.path.toLowerCase().trim();
+    const pathKey = file.path.toLowerCase().trim();
     const nameKey = file.name.toLowerCase().trim();
-    const edit = editMap.get(fullPathKey) || editMap.get(nameKey);
+    const edit = editsByPath.get(pathKey) || editsByUniqueName.get(nameKey);
 
     if (edit && edit.newFullContent) {
       appliedCount++;

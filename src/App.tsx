@@ -373,7 +373,7 @@ export default function App() {
 
           {/* Active View: Chat or Jury */}
           <div className="flex-1 overflow-hidden">
-            {(mobileTab === 'jury' || (desktopView === 'jury' && mobileTab === 'chat')) && latestEvaluation ? (
+            {(desktopView === 'jury' || mobileTab === 'jury') && latestEvaluation ? (
               <JuryEvaluationView
                 evaluation={latestEvaluation}
                 onOpenBatchEdits={(edits) => {
