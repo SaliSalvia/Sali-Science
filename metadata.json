@@ -1,0 +1,6 @@
+{
+  "name": "Axiom Jury: Scientific Invention & Research Workbench",
+  "description": "Professional scientific research and invention client powered by Google Gemini. Multi-ZIP unpacking, strict international jury peer-review, physical/patent validation, multi-version synthesis, and approved in-place file editing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
