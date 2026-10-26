@@ -181,7 +181,7 @@ export function buildJuryPrompt(
 
 ${fileSummaries}
 
-${userSpecificQuestion ? `سوال یا پرامپت خاص کاربر::\n${JSON.stringify(userSpecificQuestion)}\n` : ''}
+${userSpecificQuestion ? `سوال یا پرامپت خاص کاربر:\n${JSON.stringify(userSpecificQuestion)}\n` : ''}
 ${modeInstruction}
 
 دستورالعمل داوری:
