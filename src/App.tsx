@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   VirtualFile, 
   ZipArchive, 
@@ -83,6 +83,45 @@ export default function App() {
   // Desktop active view tab
   const [desktopView, setDesktopView] = useState<'chat' | 'jury'>('chat');
 
+  // ---- UI performance: batched streaming + always-fresh files ref ----
+  // Streaming chunks are buffered and flushed every ~60ms, so the app does
+  // not re-render dozens of times per second while text streams in.
+  const streamBufferRef = useRef<string>('');
+  const streamFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flushStreamBuffer = () => {
+    if (streamFlushTimerRef.current) {
+      clearTimeout(streamFlushTimerRef.current);
+      streamFlushTimerRef.current = null;
+    }
+    if (streamBufferRef.current) {
+      setStreamingText((prev) => prev + streamBufferRef.current);
+      streamBufferRef.current = '';
+    }
+  };
+
+  const handleStreamChunk = (chunk: string) => {
+    streamBufferRef.current += chunk;
+    if (!streamFlushTimerRef.current) {
+      streamFlushTimerRef.current = setTimeout(flushStreamBuffer, 60);
+    }
+  };
+
+  const discardStreaming = () => {
+    if (streamFlushTimerRef.current) {
+      clearTimeout(streamFlushTimerRef.current);
+      streamFlushTimerRef.current = null;
+    }
+    streamBufferRef.current = '';
+    setStreamingText('');
+  };
+
+  // Latest-files view for callbacks so memoized children never hold stale closures
+  const virtualFilesRef = useRef<VirtualFile[]>(virtualFiles);
+  useEffect(() => {
+    virtualFilesRef.current = virtualFiles;
+  }, [virtualFiles]);
+
   // Save API key & model
   const handleSaveKey = (newKey: string, newModel: SupportedModelId) => {
     setApiKey(newKey);
@@ -158,11 +197,13 @@ export default function App() {
     }
   };
 
-  // Export entire modified virtual tree to ZIP
+  // Export entire modified virtual tree to ZIP (reads the latest files via
+  // virtualFilesRef so memoized children never capture a stale closure)
   const handleExportZip = async () => {
-    if (virtualFiles.length === 0) return;
+    const currentFiles = virtualFilesRef.current;
+    if (currentFiles.length === 0) return;
     try {
-      const blob = await exportFilesToZip(virtualFiles, 'axiom_refined_project.zip');
+      const blob = await exportFilesToZip(currentFiles, 'axiom_refined_project.zip');
       triggerFileDownload(blob, 'axiom_refined_project.zip', 'application/zip');
     } catch (err: any) {
       alert(`خطا در ایجاد خروجی ZIP: ${err.message}`);
@@ -270,9 +311,7 @@ export default function App() {
         files: virtualFiles,
         useProxy: USE_PROXY,
         responseSchema: isJuryIntent && virtualFiles.length > 0 ? JURY_RESPONSE_SCHEMA : undefined,
-        onStreamChunk: (chunk) => {
-          setStreamingText((prev) => prev + chunk);
-        },
+        onStreamChunk: handleStreamChunk,
       });
 
       setStreamingText('');
@@ -315,7 +354,7 @@ export default function App() {
       setMessages((prev) => [...prev, errorMsg]);
     } finally {
       setIsLoading(false);
-      setStreamingText('');
+      discardStreaming();
     }
   };
 

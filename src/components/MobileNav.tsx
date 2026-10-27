@@ -14,7 +14,7 @@ interface MobileNavProps {
   pendingEditsCount: number;
 }
 
-export const MobileNav: React.FC<MobileNavProps> = ({
+const MobileNavBase: React.FC<MobileNavProps> = ({
   activeTab,
   onChangeTab,
   filesCount,
@@ -78,3 +78,11 @@ export const MobileNav: React.FC<MobileNavProps> = ({
     </nav>
   );
 };
+
+// Memoized: onChangeTab is a stable pure setter, safe to ignore.
+export const MobileNav = React.memo(MobileNavBase, (prev, next) =>
+  prev.activeTab === next.activeTab &&
+  prev.filesCount === next.filesCount &&
+  prev.hasEvaluation === next.hasEvaluation &&
+  prev.pendingEditsCount === next.pendingEditsCount
+);

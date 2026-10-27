@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useDeferredValue } from 'react';
 import { 
   Folder, 
   FolderOpen, 
@@ -37,7 +37,7 @@ interface FileExplorerProps {
   onRenameArchive: (archiveId: string, newName: string) => void;
 }
 
-export const FileExplorer: React.FC<FileExplorerProps> = ({
+const FileExplorerBase: React.FC<FileExplorerProps> = ({
   files,
   archives,
   selectedFileId,
@@ -84,16 +84,27 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
     }
   };
 
-  // Filter files by search query
+  // Filter files by search query (deferred value keeps typing instant on large trees)
+  const deferredQuery = useDeferredValue(searchQuery);
   const filteredFiles = useMemo(() => {
-    if (!searchQuery.trim()) return files;
-    const q = searchQuery.toLowerCase();
+    if (!deferredQuery.trim()) return files;
+    const q = deferredQuery.toLowerCase();
     return files.filter(f => f.path.toLowerCase().includes(q) || f.name.toLowerCase().includes(q));
-  }, [files, searchQuery]);
+  }, [files, deferredQuery]);
 
   const tree = useMemo(() => {
     return buildFileTree(filteredFiles);
   }, [filteredFiles]);
+
+  // O(1) lookups for tree nodes (replaces a per-node O(n) files.find)
+  const fileIndex = useMemo(() => {
+    const index = new Map<string, VirtualFile>();
+    for (const f of files) {
+      index.set(f.id, f);
+      index.set(f.path, f);
+    }
+    return index;
+  }, [files]);
 
   const handleZipInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploaded = e.target.files;
@@ -166,7 +177,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
             );
           }
 
-          const file = files.find((f) => f.id === node.fileId || f.path === node.path);
+          const file = (node.fileId ? fileIndex.get(node.fileId) : undefined) || fileIndex.get(node.path);
           const isSelected = selectedFileId === file?.id;
 
           return (
@@ -366,3 +377,13 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
     </div>
   );
 };
+
+// Memoized: skips re-renders while unrelated App state (streaming text,
+// chat messages) changes. Function props are intentionally ignored by the
+// comparator: every callback is either a pure setter or reads the latest
+// state via virtualFilesRef in App.tsx.
+export const FileExplorer = React.memo(FileExplorerBase, (prev, next) =>
+  prev.files === next.files &&
+  prev.archives === next.archives &&
+  prev.selectedFileId === next.selectedFileId
+);

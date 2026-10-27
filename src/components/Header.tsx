@@ -19,7 +19,7 @@ interface HeaderProps {
   hasEvaluation?: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({
+const HeaderBase: React.FC<HeaderProps> = ({
   apiKey,
   selectedModel,
   onOpenKeyModal,
@@ -93,3 +93,13 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
+
+// Memoized: Header only depends on these props; callbacks are pure setters
+// or ref-based reads in App.tsx, so identity changes are safe to ignore.
+export const Header = React.memo(HeaderBase, (prev, next) =>
+  prev.apiKey === next.apiKey &&
+  prev.selectedModel === next.selectedModel &&
+  prev.filesCount === next.filesCount &&
+  prev.archivesCount === next.archivesCount &&
+  prev.hasEvaluation === next.hasEvaluation
+);
