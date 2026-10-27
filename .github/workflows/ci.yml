@@ -12,13 +12,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Bun (package manager of record - uses bun.lock)
+        uses: oven-sh/setup-bun@v2
+
+      - name: Setup Node.js (runtime for tsc/tsx/vite)
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: bun install
 
       - name: Type-check (tsc --noEmit)
         run: npm run lint
