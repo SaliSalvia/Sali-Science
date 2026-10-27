@@ -269,80 +269,55 @@ export async function parseSingleUploadedFile(
  * Builds a hierarchical tree structure from virtual files
  */
 export function buildFileTree(files: VirtualFile[]): FileTreeNode[] {
-  const rootNodes: { [key: string]: FileTreeNode } = {};
+  const rootNodes: FileTreeNode[] = [];
+  const dirCache = new Map<string, FileTreeNode>();
+
+  const ensureDir = (dirPath: string, archiveId?: string): FileTreeNode => {
+    const cached = dirCache.get(dirPath);
+    if (cached) return cached;
+
+    const node: FileTreeNode = {
+      id: `dir_${dirPath}`,
+      name: dirPath.split('/').pop() || dirPath,
+      path: dirPath,
+      isDirectory: true,
+      children: [],
+      archiveId,
+    };
+    dirCache.set(dirPath, node);
+
+    const slashIdx = dirPath.lastIndexOf('/');
+    if (slashIdx === -1) {
+      rootNodes.push(node);
+    } else {
+      const parent = ensureDir(dirPath.slice(0, slashIdx), archiveId);
+      parent.children = parent.children || [];
+      parent.children.push(node);
+    }
+    return node;
+  };
 
   for (const file of files) {
-    const parts = file.path.split('/');
-    let currentPath = '';
+    const name = file.path.split('/').pop() || file.path;
+    const fileNode: FileTreeNode = {
+      id: file.id,
+      name,
+      path: file.path,
+      isDirectory: false,
+      size: file.size,
+      extension: file.extension,
+      fileId: file.id,
+      isModified: file.isModified,
+      archiveId: file.archiveId,
+    };
 
-    for (let i = 0; i < parts.length; i++) {
-      const part = parts[i];
-      const isLast = i === parts.length - 1;
-      const parentPath = currentPath;
-      currentPath = currentPath ? `${currentPath}/${part}` : part;
-
-      if (isLast) {
-        // File node
-        const fileNode: FileTreeNode = {
-          id: file.id,
-          name: part,
-          path: file.path,
-          isDirectory: false,
-          size: file.size,
-          extension: file.extension,
-          fileId: file.id,
-          isModified: file.isModified,
-          archiveId: file.archiveId,
-        };
-
-        if (parentPath) {
-          const parentNode = findNodeByPath(Object.values(rootNodes), parentPath);
-          if (parentNode) {
-            parentNode.children = parentNode.children || [];
-            // replace if exists
-            const existingIdx = parentNode.children.findIndex(c => c.name === part);
-            if (existingIdx >= 0) {
-              parentNode.children[existingIdx] = fileNode;
-            } else {
-              parentNode.children.push(fileNode);
-            }
-          }
-        } else {
-          rootNodes[part] = fileNode;
-        }
-      } else {
-        // Directory node
-        let dirNode: FileTreeNode | undefined;
-        if (parentPath) {
-          const parent = findNodeByPath(Object.values(rootNodes), parentPath);
-          if (parent) {
-            parent.children = parent.children || [];
-            dirNode = parent.children.find(c => c.name === part && c.isDirectory);
-            if (!dirNode) {
-              dirNode = {
-                id: `dir_${currentPath}`,
-                name: part,
-                path: currentPath,
-                isDirectory: true,
-                children: [],
-                archiveId: file.archiveId,
-              };
-              parent.children.push(dirNode);
-            }
-          }
-        } else {
-          if (!rootNodes[part]) {
-            rootNodes[part] = {
-              id: `dir_${part}`,
-              name: part,
-              path: part,
-              isDirectory: true,
-              children: [],
-              archiveId: file.archiveId,
-            };
-          }
-        }
-      }
+    const slashIdx = file.path.lastIndexOf('/');
+    if (slashIdx === -1) {
+      rootNodes.push(fileNode);
+    } else {
+      const parent = ensureDir(file.path.slice(0, slashIdx), file.archiveId);
+      parent.children = parent.children || [];
+      parent.children.push(fileNode);
     }
   }
 
@@ -361,18 +336,7 @@ export function buildFileTree(files: VirtualFile[]): FileTreeNode[] {
     return nodes;
   };
 
-  return sortNodes(Object.values(rootNodes));
-}
-
-function findNodeByPath(nodes: FileTreeNode[], targetPath: string): FileTreeNode | undefined {
-  for (const node of nodes) {
-    if (node.path === targetPath) return node;
-    if (node.children) {
-      const found = findNodeByPath(node.children, targetPath);
-      if (found) return found;
-    }
-  }
-  return undefined;
+  return sortNodes(rootNodes);
 }
 
 /**
