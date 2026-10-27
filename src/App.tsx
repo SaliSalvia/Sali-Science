@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { 
   VirtualFile, 
   ZipArchive, 
@@ -121,6 +122,23 @@ export default function App() {
   useEffect(() => {
     virtualFilesRef.current = virtualFiles;
   }, [virtualFiles]);
+
+  // ---- Native (Capacitor/Android) integration ----
+  // Hardware back button: close the open modal first; exit the app only
+  // when nothing is open. No-op inside a normal browser.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let disposed = false;
+    let handle: { remove: () => void } | null = null;
+    import('@capacitor/app').then(({ App: CapApp }) => CapApp.addListener('backButton', () => {
+      if (selectedFile) { setSelectedFile(null); return; }
+      if (showBatchApprovalModal) { setShowBatchApprovalModal(false); return; }
+      if (showKeyModal && apiKey.trim()) { setShowKeyModal(false); return; }
+      CapApp.exitApp();
+    })).then((h) => { if (disposed) h.remove(); else handle = h; }).catch(() => {});
+    return () => { disposed = true; handle?.remove(); };
+  }, [selectedFile, showBatchApprovalModal, showKeyModal, apiKey]);
+
 
   // Save API key & model
   const handleSaveKey = (newKey: string, newModel: SupportedModelId) => {
@@ -367,7 +385,7 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#070E1B] text-slate-100 font-sans selection:bg-cyan-500/30 selection:text-cyan-200" dir="rtl">
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#070E1B] text-slate-100 font-sans selection:bg-cyan-500/30 selection:text-cyan-200 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]" dir="rtl">
       
       {/* Top Application Header */}
       <Header

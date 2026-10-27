@@ -6,3 +6,9 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Capacitor / Android (پلتفرم اندروید در CI بازتولید می‌شود)
+android/
+*.keystore
+*.jks
+keystore.properties

@@ -19,7 +19,7 @@
 
 ## 🧱 پشته فناوری
 
-React 19 · TypeScript · Vite · Tailwind CSS 4 · @google/genai · JSZip · diff · lucide-react · Express (پراکسی اختیاری)
+React 19 · TypeScript · Vite · Tailwind CSS 4 · @google/genai · JSZip · diff · lucide-react · Express (پراکسی اختیاری) · Capacitor 8 (اندروید)
 
 ## 🚀 اجرا
 
@@ -38,6 +38,34 @@ npm run lint       # بررسی تایپ‌ها با tsc
 ```
 
 CI در GitHub Actions روی هر push/PR اجرا می‌شود: نصب وابستگی‌ها، بررسی تایپ، تست‌ها و build.
+
+## 🤖 نسخه اندروید (APK)
+
+اپلیکیشن به‌صورت کامل در GitHub Actions به یک APK/AAB اندروید **امضاشده** تبدیل می‌شود — بدون هیچ وابستگی به AI Studio یا ابزار بومی (فایل `android/` در ریپو وجود ندارد و در هر بیلد از صفر بازتولید می‌شود):
+
+- ورک‌فلو `.github/workflows/android.yml` با هر merge به `main` یا تگ `v*` (یا اجرای دستی از تب **Actions**) فعال می‌شود و نسخه `v{version}` را در [Releases](https://github.com/SaliSalvia/Sali-Science/releases) منتشر می‌کند
+- خروجی Vite (`dist/`) داخل کانتینر بومی **Capacitor 8** قرار می‌گیرد (`capacitor.config.ts`)
+- آیکون‌های لانچر (شامل Adaptive Icon اندروید ۸ به بالا) در CI از `assets/icon*.svg` تولید می‌شوند
+- خروجی: **APK** (نصب مستقیم) + **AAB** (برای Google Play) + فایل `SHA256SUMS` در [Releases](https://github.com/SaliSalvia/Sali-Science/releases)
+
+### امضای پایدار (Stable Signing)
+
+اگر Secrets امضا تنظیم نشده باشند، ورک‌فلو برای همان بیلد یک کلید موقت تولید می‌کند؛ در این حالت نصب هر نسخه جدید مستلزم حذف نسخه قبلی است. برای امضای پایدار (به‌روزرسانی بدون حذف):
+
+```bash
+keytool -genkeypair -v -keystore axiomjury.keystore -alias axiomjury \
+  -keyalg RSA -keysize 2048 -validity 10000
+base64 -w0 axiomjury.keystore   # خروجی را کپی کنید
+```
+
+سپس در **Settings → Secrets and variables → Actions** این چهار Secret را اضافه کنید:
+
+| Secret | مقدار |
+|---|---|
+| `ANDROID_KEYSTORE_BASE64` | خروجی base64 بالا |
+| `ANDROID_KEYSTORE_PASSWORD` | رمز keystore |
+| `ANDROID_KEY_ALIAS` | axiomjury |
+| `ANDROID_KEY_PASSWORD` | رمز کلید (می‌توانید همان رمز keystore) |
 
 ## 🔐 امنیت: حالت خودمیزبان (Self-hosted)
 
@@ -60,7 +88,10 @@ src/lib/geminiClient.ts  # ارتباط با Gemini (استریم، حالت پ�
 src/lib/types.ts         # مدل‌های داده (VirtualFile، JuryEvaluation و…)
 src/components/          # رابط کاربری (FileExplorer با تغییر نام آرشیو و…)
 server/proxy.js          # پراکسی کلید API + استریم SSE
-.github/workflows/       # CI (تایپ‌چک، تست، build)
+.github/workflows/       # CI (تایپ‌چک، تست، build) + بیلد اندروید (android.yml)
+capacitor.config.ts     # پیکربندی کانتینر بومی Capacitor
+scripts/prepare-android.mjs  # آماده‌سازی اندروید در CI (آیکون، نسخه، امضا)
+assets/icon*.svg        # لوگوی برداری و منبع آیکون‌های لانچر
 ```
 
 ## 🗺️ نقشه راه
@@ -70,6 +101,7 @@ server/proxy.js          # پراکسی کلید API + استریم SSE
 - [x] استفاده از responseSchema گمنای برای خروجی JSON تضمینی
 - [x] CI با GitHub Actions (type-check + test + build)
 - [x] بهینه‌سازی سرعت و روانی UI — بافر استریم ۶۰ms، memoization کامپوننت‌ها، ایندکس O(1) درخت فایل، جستجوی غیرمسدودکننده
+- [x] بیلد اندروید امضاشده (APK/AAB) در GitHub Actions با Capacitor 8 — استقلال کامل از AI Studio
 - [ ] تاریخچه ارزیابی‌ها و خروجی PDF کارنامه داوری
 - [ ] حذف مدل‌های قدیمی 1.5 و افزودن مدل‌های جدیدتر
 
