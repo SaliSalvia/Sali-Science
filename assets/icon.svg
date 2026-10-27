@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <radialGradient id="bgGlow" cx="50%" cy="36%" r="80%">
+      <stop offset="0%" stop-color="#16305C"/>
+      <stop offset="55%" stop-color="#0C1B33"/>
+      <stop offset="100%" stop-color="#070E1B"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FCD34D"/>
+      <stop offset="55%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+    <linearGradient id="cy" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7DE9FB"/>
+      <stop offset="100%" stop-color="#0E7490"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bgGlow)"/>
+  <g stroke="#22406E" stroke-width="2" opacity="0.22" fill="none">
+    <path d="M0 256 H1024 M0 512 H1024 M0 768 H1024 M256 0 V1024 M512 0 V1024 M768 0 V1024"/>
+  </g>
+  <circle cx="512" cy="512" r="500" fill="none" stroke="#2E4E7E" stroke-width="4" opacity="0.28"/>
+  <circle cx="512" cy="512" r="470" fill="none" stroke="#2E4E7E" stroke-width="2" opacity="0.16"/>
+
+  <!-- Atom orbits (science) -->
+  <g fill="none" stroke="url(#cy)" stroke-width="18" stroke-linecap="round" opacity="0.92">
+    <ellipse cx="512" cy="340" rx="216" ry="86" transform="rotate(-28 512 340)"/>
+    <ellipse cx="512" cy="340" rx="216" ry="86" transform="rotate(28 512 340)"/>
+    <ellipse cx="512" cy="340" rx="86" ry="216"/>
+  </g>
+  <circle cx="512" cy="340" r="32" fill="url(#cy)"/>
+  <circle cx="703" cy="300" r="15" fill="#7DE9FB"/>
+  <circle cx="321" cy="380" r="15" fill="#38BDF8"/>
+
+  <!-- Scales of justice (jury) -->
+  <rect x="502" y="372" width="20" height="396" rx="10" fill="url(#gold)"/>
+  <circle cx="512" cy="378" r="24" fill="url(#gold)"/>
+  <rect x="302" y="440" width="420" height="18" rx="9" fill="url(#gold)"/>
+  <g stroke="url(#gold)" stroke-width="7" stroke-linecap="round" opacity="0.92" fill="none">
+    <path d="M302 458 L252 570"/>
+    <path d="M302 458 L352 570"/>
+    <path d="M722 458 L672 570"/>
+    <path d="M722 458 L772 570"/>
+  </g>
+  <path d="M252 570 A 50 50 0 0 0 352 570 Z" fill="url(#gold)"/>
+  <path d="M672 570 A 50 50 0 0 0 772 570 Z" fill="url(#gold)"/>
+  <rect x="412" y="752" width="200" height="20" rx="10" fill="url(#gold)"/>
+  <rect x="452" y="726" width="120" height="14" rx="7" fill="url(#gold)" opacity="0.85"/>
+</svg>

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FCD34D"/>
+      <stop offset="55%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+    <linearGradient id="cy" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7DE9FB"/>
+      <stop offset="100%" stop-color="#0E7490"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(512 512) scale(0.68) translate(-512 -512)">
+    <!-- Atom orbits (science) -->
+    <g fill="none" stroke="url(#cy)" stroke-width="16" stroke-linecap="round" opacity="0.92">
+      <ellipse cx="512" cy="330" rx="216" ry="86" transform="rotate(-28 512 330)"/>
+      <ellipse cx="512" cy="330" rx="216" ry="86" transform="rotate(28 512 330)"/>
+      <ellipse cx="512" cy="330" rx="86" ry="216"/>
+    </g>
+    <circle cx="512" cy="330" r="30" fill="url(#cy)"/>
+    <circle cx="703" cy="290" r="14" fill="#7DE9FB"/>
+    <circle cx="321" cy="370" r="14" fill="#38BDF8"/>
+
+    <!-- Scales of justice (jury) -->
+    <rect x="502" y="360" width="20" height="400" rx="10" fill="url(#gold)"/>
+    <circle cx="512" cy="366" r="24" fill="url(#gold)"/>
+    <rect x="302" y="430" width="420" height="18" rx="9" fill="url(#gold)"/>
+    <g stroke="url(#gold)" stroke-width="7" stroke-linecap="round" opacity="0.92" fill="none">
+      <path d="M302 448 L252 560"/>
+      <path d="M302 448 L352 560"/>
+      <path d="M722 448 L672 560"/>
+      <path d="M722 448 L772 560"/>
+    </g>
+    <path d="M252 560 A 50 50 0 0 0 352 560 Z" fill="url(#gold)"/>
+    <path d="M672 560 A 50 50 0 0 0 772 560 Z" fill="url(#gold)"/>
+    <rect x="412" y="748" width="200" height="20" rx="10" fill="url(#gold)"/>
+    <rect x="452" y="722" width="120" height="14" rx="7" fill="url(#gold)" opacity="0.85"/>
+  </g>
+</svg>

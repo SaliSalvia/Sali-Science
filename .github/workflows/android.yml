@@ -1,0 +1,119 @@
+name: Android Release (APK/AAB)
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'تگ انتشار (مثل v0.5.0) — خالی بگذارید تا فقط artifact ساخته شود'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build signed APK & AAB
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up JDK 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build web app (dist/)
+        run: bun run build
+
+      - name: Generate Android platform (Capacitor 8)
+        run: bunx cap add android
+
+      - name: Sync web assets & Capacitor plugins
+        run: bunx cap sync android
+
+      - name: Prepare icons, version & signing
+        run: node scripts/prepare-android.mjs
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      - name: Assemble release APK & AAB
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease bundleRelease --no-daemon
+
+      - name: Collect release files
+        run: |
+          set -e
+          VERSION=$(node -p "require('./package.json').version")
+          mkdir -p release
+          cp android/app/build/outputs/apk/release/app-release.apk "release/AxiomJury-v${VERSION}-b${GITHUB_RUN_NUMBER}.apk"
+          cp android/app/build/outputs/bundle/release/app-release.aab "release/AxiomJury-v${VERSION}-b${GITHUB_RUN_NUMBER}.aab"
+          (cd release && sha256sum * > SHA256SUMS.txt)
+          ls -lh release/
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-${{ github.run_number }}
+          path: release/
+          if-no-files-found: error
+
+      - name: Create / update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_RELEASE_TAG: ${{ inputs.release_tag || '' }}
+        run: |
+          set -e
+          # Resolve the release tag: explicit v* tag push > manual input > auto v{version} on main
+          TAG=""
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          elif [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF" == "refs/heads/main" ]]; then
+            TAG="v$(node -p "require('./package.json').version")"
+          elif [[ -n "$INPUT_RELEASE_TAG" ]]; then
+            TAG="$INPUT_RELEASE_TAG"
+          fi
+          if [ -z "$TAG" ]; then
+            echo "No release tag resolved — skipping release (artifact uploaded above)."
+            exit 0
+          fi
+          VERSION=$(node -p "require('./package.json').version")
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG exists — updating assets."
+            gh release upload "$TAG" release/* --clobber
+          else
+            gh release create "$TAG" \
+              --target "$GITHUB_SHA" \
+              --title "Axiom Jury v${VERSION} — اندروید (APK)" \
+              --generate-notes \
+              --latest \
+              release/*
+          fi
