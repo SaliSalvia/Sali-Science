@@ -1,3 +1,21 @@
+```text
+ ███   ███  █      ███  ████
+█   █ █   █ █     █   █ █   █
+█     █   █ █     █   █ █   █
+ ███  █████ █     █████ ████
+    █ █   █ █     █   █ █ █
+█   █ █   █ █     █   █ █  █
+ ███  █   █ █████ █   █ █   █
+
+ ▓▓▓   ▓▓▓  ▓     ▓   ▓ ▓▓▓  ▓▓▓
+▓   ▓ ▓   ▓ ▓     ▓   ▓  ▓  ▓   ▓
+▓     ▓   ▓ ▓     ▓   ▓  ▓  ▓   ▓
+ ▓▓▓  ▓▓▓▓▓ ▓     ▓   ▓  ▓  ▓▓▓▓▓
+    ▓ ▓   ▓ ▓     ▓   ▓  ▓  ▓   ▓
+▓   ▓ ▓   ▓ ▓      ▓ ▓   ▓  ▓   ▓
+ ▓▓▓  ▓   ▓ ▓▓▓▓▓   ▓   ▓▓▓ ▓   ▓
+```
+
 [![CI](https://github.com/SaliSalvia/Sali-Science/actions/workflows/ci.yml/badge.svg)](https://github.com/SaliSalvia/Sali-Science/actions/workflows/ci.yml)
 
 # Sali-Science — Axiom Jury 🔬
